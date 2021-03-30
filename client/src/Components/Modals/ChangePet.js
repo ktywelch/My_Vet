@@ -10,6 +10,7 @@ const ChangePet = (props) => {
 	const uploadedImage = useRef(null);
 	const imageUploader = useRef(null);
 	const [file, setFile] = useState(null);
+	const { petId, setPetId } = useContext(PetContext);
 
 	//state for new pet data to be added to db
 
@@ -37,13 +38,36 @@ const ChangePet = (props) => {
 	};
 
 	const updatePet = async (e) => {
-		newPet.PetImageLoc = PetImageLoc;
 		e.preventDefault();
 		try {
-			await axios.patch("/api/updatepet/" + newPet._id, newPet, {
+			var formData = new FormData();
+
+			formData.append("file", file);
+
+			if (REACT_APP_LOCAL_STORAGE && file) {
+				await axios
+					.post("/api/saveLocImage", formData, {
+						headers: { "x-auth-token": localStorage.getItem("auth-token") },
+					})
+					.then((data) => (newPet.PetImageLoc = data.data.fileUrl));
+			}
+
+			if (!REACT_APP_LOCAL_STORAGE && file) {
+				await axios
+					.post("/api/saveImage", formData, {
+						headers: { "x-auth-token": localStorage.getItem("auth-token") },
+					})
+					.then((data) => {
+						console.log(file,data.data)
+						newPet.PetImageLoc = data.data.fileUrl});
+			}
+            console.log(newPet);
+			await axios.patch(`/api/updatepet/${petId}`, newPet, {
 				headers: { "x-auth-token": localStorage.getItem("auth-token") },
 			});
+
 			setNewPetData(true);
+			window.location.reload();
 		} catch (error) {
 			console.log(error);
 		}
@@ -62,24 +86,6 @@ const ChangePet = (props) => {
 					current.src = e.target.result;
 				};
 				reader.readAsDataURL(file);
-			}
-
-			var formData = new FormData();
-
-			formData.append("file", file);
-			/// if local env set use local storage
-			if (REACT_APP_LOCAL_STORAGE) {
-				await axios
-					.post("/api/saveLocImage", formData, {
-						headers: { "x-auth-token": localStorage.getItem("auth-token") },
-					})
-					.then((data) => (newPet.PetImageLoc = data.data.fileUrl));
-			} else {
-				await axios
-					.post("/api/saveImage", formData, {
-						headers: { "x-auth-token": localStorage.getItem("auth-token") },
-					})
-					.then((data) => (newPet.PetImageLoc = data.data.fileUrl));
 			}
 		} catch (error) {
 			toast.error(
@@ -106,7 +112,7 @@ const ChangePet = (props) => {
 						className="modal-body"
 					>
 						<form>
-							<div className="form-group">
+						<div className="form-group">
 								<label>
 									Add Photo <i className="fa fa-camera"></i>
 								</label>
@@ -127,21 +133,24 @@ const ChangePet = (props) => {
 											height: "60px",
 											width: "60px",
 											border: "none",
-											borderRadius: "100%",
+											borderRadius: "50%",
+										}}
+										src={newPet && newPet.PetImageLoc}
+									></img>
+								</div>
+								<div className="container">
+									<input
+										onChange={(e) => handleImage(e)}
+										ref={imageUploader}
+										type="file"
+										accept="image/*"
+										multiple={false}
+										name="PetImageLoc"
+										style={{
+											display: "none",
 										}}
 									/>
 								</div>
-								<input
-									onChange={(e) => handleImage(e)}
-									ref={imageUploader}
-									type="file"
-									accept="image/*"
-									multiple={false}
-									name="PetImageLoc"
-									style={{
-										display: "none",
-									}}
-								/>
 							</div>
 							<p></p>
 							<div className="form-group">
@@ -175,6 +184,7 @@ const ChangePet = (props) => {
 									name="Gender"
 									type="text"
 									defaultValue={newPet && newPet.Gender}
+
 								/>
 							</div>
 							<p></p>
@@ -185,6 +195,7 @@ const ChangePet = (props) => {
 									name="TypeOfPet"
 									type="text"
 									defaultValue={newPet && newPet.TypeOfPet}
+		
 								/>
 							</div>
 							<p></p>
@@ -195,6 +206,7 @@ const ChangePet = (props) => {
 									name="Breed"
 									type="text"
 									defaultValue={newPet && newPet.Breed}
+								
 								/>
 							</div>
 						</form>
